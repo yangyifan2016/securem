@@ -42,6 +42,12 @@ export const sidebarRoutes = [
         component: () => import('@/views/templateManage/templateGroup/index'),
         name: 'templateGroup',
         meta: { title: '处理模板组', icon: 'form' }
+      },
+      {
+        path: 'regular',
+        component: () => import('@/views/templateManage/regular/index'),
+        name: 'regular',
+        meta: { title: '正则表达式', icon: 'form' }
       }
     ]
   }

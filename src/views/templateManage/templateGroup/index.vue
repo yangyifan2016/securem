@@ -39,7 +39,7 @@
          <right-toolbar v-model:showSearch="showSearch" @queryTable="getList"></right-toolbar>
       </el-row>
 
-      <el-table v-loading="loading" :data="configList" @selection-change="handleSelectionChange">
+      <el-table v-loading="loading" :data="configList" :border="true" @selection-change="handleSelectionChange">
          <el-table-column type="selection" width="55" align="center" />
          <el-table-column label="id" align="center" prop="id" width="55" />
          <el-table-column label="名称" align="center" prop="name" :show-overflow-tooltip="true" />
@@ -84,10 +84,13 @@
                <el-input v-model="form.name" placeholder="请输入" />
             </el-form-item>
             <el-form-item label="状态" prop="status">
-               <el-radio-group v-model="form.status">
-                  <el-radio :label="0">禁用</el-radio>
-                  <el-radio :label="1">启用</el-radio>
-               </el-radio-group>
+               <el-switch
+                  v-model="form.status"
+                  active-text="启用"
+                  inactive-text="禁用"
+                  :active-value="1"
+                  :inactive-value="0">
+               </el-switch>
             </el-form-item>
          </el-form>
          <template #footer>
@@ -227,13 +230,18 @@ function handleSelectionChange(selection) {
    multiple.value = !selection.length;
 }
 function checkDealCodeExist(rule, value, callback) {
-   dealCodeIsExist(value).then(response => {
-      if (response.data) {
-         callback(new Error('该dealCode已存在'));
-      } else {
-         callback()
-      }
-   });
+   if (form.value.id != undefined) {
+      callback()
+   } else {
+      // 新增校验
+      dealCodeIsExist(value).then(response => {
+         if(response.data) {
+            callback(new Error('该dealCode已存在'));
+         }else{
+            callback()
+         }
+      })
+   }
 }
 getList();
 </script>

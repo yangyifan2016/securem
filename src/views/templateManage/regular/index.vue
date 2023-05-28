@@ -1,12 +1,12 @@
 <template>
    <div class="app-container">
       <el-form :model="queryParams" ref="queryRef" :inline="true" v-show="showSearch" label-width="140px">
-         <el-form-item label="处理模板唯一code" prop="dealCode">
-            <el-input v-model="queryParams.dealCode" placeholder="请输入" clearable style="width: 240px"
+         <el-form-item label="正则" prop="regular">
+            <el-input v-model="queryParams.regular" placeholder="请输入" clearable style="width: 240px"
                @keyup.enter="handleQuery" />
          </el-form-item>
-         <el-form-item label="处理模板名称" prop="name">
-            <el-input v-model="queryParams.name" placeholder="请输入" clearable style="width: 240px"
+         <el-form-item label="描述" prop="description">
+            <el-input v-model="queryParams.description" placeholder="请输入" clearable style="width: 240px"
                @keyup.enter="handleQuery" />
          </el-form-item>
          <el-form-item label="状态" prop="status">
@@ -37,26 +37,11 @@
 
       <el-table v-loading="loading" :data="configList" :border="true" @selection-change="handleSelectionChange">
          <el-table-column type="selection" width="55" align="center" />
-         <el-table-column label="id" align="center" prop="id" width="55" />
-         <el-table-column label="名称" align="center" prop="name" :show-overflow-tooltip="true" />
-         <el-table-column label="模板唯一code" align="center" prop="dealCode" :show-overflow-tooltip="true" />
-         <!-- <el-table-column label="模板组id" align="center" prop="dealTemplateGroupId" :show-overflow-tooltip="true" />
-         <el-table-column label="详情" align="center" prop="detail" :show-overflow-tooltip="true" />
-         <el-table-column label="数据处理前" align="center" prop="dealDataBefore" :show-overflow-tooltip="true" />
-         <el-table-column label="数据处理后" align="center" prop="dealDataAfter" :show-overflow-tooltip="true" /> -->
+         <el-table-column label="正则" align="center" prop="regular" :show-overflow-tooltip="true" />
+         <el-table-column label="描述" align="center" prop="description" :show-overflow-tooltip="true" />
          <el-table-column label="状态" align="center" prop="status">
             <template #default="scope">
                <div>{{ scope.row.status == 0 ? '禁用' : '启用' }}</div>
-            </template>
-         </el-table-column>
-         <el-table-column label="创建时间" align="center" prop="createTime" width="180">
-            <template #default="scope">
-               <span>{{ parseTime(scope.row.createTime) }}</span>
-            </template>
-         </el-table-column>
-         <el-table-column label="修改时间" align="center" prop="updateTime" width="180">
-            <template #default="scope">
-               <span>{{ parseTime(scope.row.updateTime) }}</span>
             </template>
          </el-table-column>
          <el-table-column label="操作" align="center" width="150" class-name="small-padding fixed-width">
@@ -73,21 +58,11 @@
       <!-- 添加或修改参数配置对话框 -->
       <el-dialog :title="title" v-model="open" width="800px" append-to-body>
          <el-form ref="configRef" :model="form" :rules="rules" label-width="150px">
-            <el-form-item label="模板名称" prop="name">
-               <el-input v-model="form.name" placeholder="请输入" />
+            <el-form-item label="正则" prop="regular">
+               <el-input v-model="form.regular" placeholder="请输入" />
             </el-form-item>
-            <el-form-item label="模板唯一code" prop="dealCode">
-               <el-input v-model="form.dealCode" placeholder="请输入" :disabled="Boolean(form.id)" />
-            </el-form-item>
-            <el-form-item label="模板组" prop="dealTemplateGroupId">
-               <el-select v-model="form.dealTemplateGroupId" filterable remote placeholder="请输入模板组名称"
-                  :remote-method="getGroupList" @focus="getGroupList()" :loading="groupLoading">
-                  <el-option v-for="item in groupList" :key="item.id" :label="item.name" :value="item.id">
-                  </el-option>
-               </el-select>
-            </el-form-item>
-            <el-form-item label="详情" prop="detail">
-               <el-input v-model="form.detail" placeholder="请输入" />
+            <el-form-item label="描述" prop="description">
+               <el-input v-model="form.description" placeholder="请输入"/>
             </el-form-item>
             <el-form-item label="状态" prop="status">
                <el-switch
@@ -97,12 +72,6 @@
                   :active-value="1"
                   :inactive-value="0">
                </el-switch>
-            </el-form-item>
-            <el-form-item label="数据被处理之前" prop="dealDataBefore">
-               <el-input v-model="form.dealDataBefore" placeholder="请输入" />
-            </el-form-item>
-            <el-form-item label="数据被处理之后" prop="dealDataAfter">
-               <el-input v-model="form.dealDataAfter" placeholder="请输入" />
             </el-form-item>
          </el-form>
          <template #footer>
@@ -116,14 +85,11 @@
 </template>
 
 <script setup name="Config">
-import { queryList, createTemplate, deleteTemplate, updateTemplate, dealCodeIsExist } from "@/api/templateManage/template";
-import { queryList as queryGroup } from "@/api/templateManage/templateGroup";
-import { debounce } from "@/utils";
+import { queryList, createRegular, deleteRegular, updateRegular } from "@/api/templateManage/regular";
 
 const { proxy } = getCurrentInstance();
 
 const configList = ref([]);
-const groupList = ref([]);
 const open = ref(false);
 const loading = ref(false);
 const showSearch = ref(true);
@@ -134,28 +100,20 @@ const totalNum = ref(0);
 const title = ref("");
 const dateRange = ref([]);
 const btnLoading = ref(false);
-const groupLoading = ref(false);
 
 const data = reactive({
    form: {},
    queryParams: {
       current: 1,
       size: 10,
-      dealCode: '',
-      name: '',
+      regular: '',
+      description: '',
       status: '',
    },
    rules: {
-      name: [{ required: true, message: "模板名称不能为空", trigger: "blur" }],
-      dealCode: [
-         { required: true, message: "模板唯一code不能为空", trigger: "blur" },
-         { validator: checkDealCodeExist, trigger: "blur"}
-      ],
-      dealTemplateGroupId: [{ required: true, message: "模板组不能为空", trigger: "blur" }],
-      detail: [{ required: true, message: "详情不能为空", trigger: "blur" }],
+      regular: [{ required: true, message: "正则不能为空", trigger: "blur" }],
+      description: [{ required: true, message: "描述不能为空", trigger: "blur" }],
       status: [{ required: true, message: "状态不能为空", trigger: "blur" }],
-      dealDataBefore: [{ required: true, message: "数据被处理之前不能为空", trigger: "blur" }],
-      dealDataAfter: [{ required: true, message: "数据被处理之后不能为空", trigger: "blur" }],
    }
 });
 
@@ -169,37 +127,6 @@ function getList() {
       totalNum.value = response.data.totalNum;
       loading.value = false;
    });
-}
-/** 查询模板组列表 */
-function getGroupList(name) {
-   groupList.value = []
-   groupLoading.value = true
-   debounce(function() {
-      queryGroup({
-         name: name,
-         current: groupList.length,
-         size: 20,
-      }).then(response => {
-         groupLoading.value = false
-         groupList.value = response.data.data;
-      }).catch(() => {
-         groupLoading.value = false
-      });
-   }, 300, false)()
-}
-function checkDealCodeExist(rule, value, callback) {
-   if (form.value.id != undefined) {
-      callback()
-   } else {
-      // 新增校验
-      dealCodeIsExist(value).then(response => {
-         if(response.data) {
-            callback(new Error('该dealCode已存在'));
-         }else{
-            callback()
-         }
-      })
-   }
 }
 /** 搜索按钮操作 */
 function handleQuery() {
@@ -220,10 +147,9 @@ function cancel() {
 /** 表单重置 */
 function reset() {
    form.value = {
-      dealCode: '',
-      dealTemplateCategoryId: '',
-      name: '',
-      status: 0,
+      regular: '',
+      description: '',
+      status: '',
    };
    proxy.resetForm("configRef");
 }
@@ -231,14 +157,14 @@ function reset() {
 function handleAdd() {
    reset();
    open.value = true;
-   title.value = "新增模板";
+   title.value = "新增正则";
 }
 /** 修改按钮操作 */
 function handleUpdate(row) {
    reset();
    form.value = { ...row }
    open.value = true;
-   title.value = "修改模板";
+   title.value = "修改正则";
 }
 /** 提交按钮 */
 function submitForm() {
@@ -246,14 +172,14 @@ function submitForm() {
       if (valid) {
          btnLoading.value = true
          if (form.value.id != undefined) {
-            updateTemplate(form.value).then(response => {
+            updateRegular(form.value).then(response => {
                proxy.$modal.msgSuccess("修改成功");
                open.value = false;
                btnLoading.value = false
                getList();
             });
          } else {
-            createTemplate(form.value).then(response => {
+            createRegular(form.value).then(response => {
                proxy.$modal.msgSuccess("新增成功");
                open.value = false;
                btnLoading.value = false
@@ -267,7 +193,7 @@ function submitForm() {
 function handleDelete(row) {
    const configIds = row.id ? [row.id] : ids.value;
    proxy.$modal.confirm('是否确认删除id为"' + configIds + '"的数据项？').then(function () {
-      return deleteTemplate({ idList: configIds });
+      return deleteRegular({ idList: configIds });
    }).then(() => {
       getList();
       proxy.$modal.msgSuccess("删除成功");
