@@ -16,7 +16,7 @@
                <el-option label="启用" :value="1" />
             </el-select>
          </el-form-item>
-         <el-form-item>
+         <el-form-item style="float:right">
             <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
             <el-button icon="Refresh" @click="resetQuery">重置</el-button>
          </el-form-item>
@@ -35,25 +35,18 @@
          <right-toolbar v-model:showSearch="showSearch" @queryTable="getList"></right-toolbar>
       </el-row>
 
-      <el-table v-loading="loading" :data="configList" :border="true" @selection-change="handleSelectionChange">
-         <el-table-column type="selection" width="55" align="center" />
-         <el-table-column label="正则" align="center" prop="regular" :show-overflow-tooltip="true" />
-         <el-table-column label="描述" align="center" prop="description" :show-overflow-tooltip="true" />
-         <el-table-column label="状态" align="center" prop="status">
-            <template #default="scope">
-               <div>{{ scope.row.status == 0 ? '禁用' : '启用' }}</div>
-            </template>
-         </el-table-column>
-         <el-table-column label="操作" align="center" width="150" class-name="small-padding fixed-width">
-            <template #default="scope">
-               <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)">修改</el-button>
-               <el-button link type="primary" icon="Delete" @click="handleDelete(scope.row)">删除</el-button>
-            </template>
-         </el-table-column>
-      </el-table>
-
-      <pagination v-show="totalNum > 0" :total="totalNum" v-model:page="queryParams.current"
-         v-model:limit="queryParams.size" @pagination="getList" />
+      <m-table 
+         :loading="loading" 
+         :dataList="dataList" 
+         :columns="columns" 
+         :operations="operations" 
+         :totalNum="totalNum"
+         :current="queryParams.current" 
+         :size="queryParams.size" 
+         @handleSelectionChange="handleSelectionChange"
+         @operationHandler="operationHandler" 
+         @getList="getList"
+      ></m-table>
 
       <!-- 添加或修改参数配置对话框 -->
       <el-dialog :title="title" v-model="open" width="800px" append-to-body>
@@ -89,7 +82,44 @@ import { queryList, createRegular, deleteRegular, updateRegular } from "@/api/te
 
 const { proxy } = getCurrentInstance();
 
-const configList = ref([]);
+const dataList = ref([]);
+const columns = [{
+   label: 'id',
+   prop: 'id',
+   width: 55
+}, {
+   label: '描述',
+   prop: 'description',
+   showOverflowTooltip: true
+}, {
+   label: '正则',
+   prop: 'regular',
+   showOverflowTooltip: true
+}, {
+   label: '状态',
+   prop: 'status',
+   scope: (value) => value == 0 ? '禁用' : '启用'
+}, {
+   label: '创建时间',
+   prop: 'createTime',
+   width: 180,
+   scope: 'time'
+}, {
+   label: '修改时间',
+   prop: 'updateTime',
+   width: 180,
+   scope: 'time'
+}]
+const operations = [{
+   icon: 'Edit',
+   emitName: 'handleUpdate',
+   buttonName: '修改'
+}, {
+   type: 'danger',
+   icon: 'Delete',
+   emitName: 'handleDelete',
+   buttonName: '删除'
+}]
 const open = ref(false);
 const loading = ref(false);
 const showSearch = ref(true);
@@ -120,10 +150,12 @@ const data = reactive({
 const { queryParams, form, rules } = toRefs(data);
 
 /** 查询参数列表 */
-function getList() {
+function getList(current, size) {
+   if (current) queryParams.value.current = current
+   if (size) queryParams.value.size = size
    loading.value = true;
    queryList(queryParams.value).then(response => {
-      configList.value = response.data.data;
+      dataList.value = response.data.data;
       totalNum.value = response.data.totalNum;
       loading.value = false;
    });
@@ -158,6 +190,13 @@ function handleAdd() {
    reset();
    open.value = true;
    title.value = "新增正则";
+}
+function operationHandler(handleName, row) {
+   if (handleName === 'handleUpdate') {
+      handleUpdate(row)
+   } else if (handleName === 'handleDelete') {
+      handleDelete(row)
+   }
 }
 /** 修改按钮操作 */
 function handleUpdate(row) {

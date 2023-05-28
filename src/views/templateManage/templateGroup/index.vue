@@ -20,7 +20,7 @@
                <el-option label="启用" :value="1" />
             </el-select>
          </el-form-item>
-         <el-form-item>
+         <el-form-item style="float:right">
             <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
             <el-button icon="Refresh" @click="resetQuery">重置</el-button>
          </el-form-item>
@@ -39,37 +39,18 @@
          <right-toolbar v-model:showSearch="showSearch" @queryTable="getList"></right-toolbar>
       </el-row>
 
-      <el-table v-loading="loading" :data="configList" :border="true" @selection-change="handleSelectionChange">
-         <el-table-column type="selection" width="55" align="center" />
-         <el-table-column label="id" align="center" prop="id" width="55" />
-         <el-table-column label="名称" align="center" prop="name" :show-overflow-tooltip="true" />
-         <el-table-column label="模板分组唯一code" align="center" prop="dealCode" :show-overflow-tooltip="true" />
-         <el-table-column label="处理模板类别id" align="center" prop="dealTemplateCategoryId" :show-overflow-tooltip="true" />
-         <el-table-column label="状态" align="center" prop="status">
-            <template #default="scope">
-               <div>{{ scope.row.status == 0 ? '禁用' : '启用' }}</div>
-            </template>
-         </el-table-column>
-         <el-table-column label="创建时间" align="center" prop="createTime" width="180">
-            <template #default="scope">
-               <span>{{ parseTime(scope.row.createTime) }}</span>
-            </template>
-         </el-table-column>
-         <el-table-column label="修改时间" align="center" prop="updateTime" width="180">
-            <template #default="scope">
-               <span>{{ parseTime(scope.row.updateTime) }}</span>
-            </template>
-         </el-table-column>
-         <el-table-column label="操作" align="center" width="150" class-name="small-padding fixed-width">
-            <template #default="scope">
-               <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)">修改</el-button>
-               <el-button link type="primary" icon="Delete" @click="handleDelete(scope.row)">删除</el-button>
-            </template>
-         </el-table-column>
-      </el-table>
-
-      <pagination v-show="totalNum > 0" :total="totalNum" v-model:page="queryParams.current"
-         v-model:limit="queryParams.size" @pagination="getList" />
+      <m-table 
+         :loading="loading" 
+         :dataList="dataList" 
+         :columns="columns" 
+         :operations="operations" 
+         :totalNum="totalNum"
+         :current="queryParams.current" 
+         :size="queryParams.size" 
+         @handleSelectionChange="handleSelectionChange"
+         @operationHandler="operationHandler" 
+         @getList="getList"
+      ></m-table>
 
       <!-- 添加或修改参数配置对话框 -->
       <el-dialog :title="title" v-model="open" width="800px" append-to-body>
@@ -84,12 +65,7 @@
                <el-input v-model="form.name" placeholder="请输入" />
             </el-form-item>
             <el-form-item label="状态" prop="status">
-               <el-switch
-                  v-model="form.status"
-                  active-text="启用"
-                  inactive-text="禁用"
-                  :active-value="1"
-                  :inactive-value="0">
+               <el-switch v-model="form.status" active-text="启用" inactive-text="禁用" :active-value="1" :inactive-value="0">
                </el-switch>
             </el-form-item>
          </el-form>
@@ -108,7 +84,44 @@ import { queryList, createGroup, deleteGroup, updateGroup, dealCodeIsExist } fro
 
 const { proxy } = getCurrentInstance();
 
-const configList = ref([]);
+const dataList = ref([]);
+const columns = [{
+   label: 'id',
+   prop: 'id',
+   width: 55
+}, {
+   label: '名称',
+   prop: 'name',
+   showOverflowTooltip: true
+}, {
+   label: '模板分组唯一code',
+   prop: 'dealCode',
+   showOverflowTooltip: true
+}, {
+   label: '状态',
+   prop: 'status',
+   scope: (value) => value == 0 ? '禁用' : '启用'
+}, {
+   label: '创建时间',
+   prop: 'createTime',
+   width: 180,
+   scope: 'time'
+}, {
+   label: '修改时间',
+   prop: 'updateTime',
+   width: 180,
+   scope: 'time'
+}]
+const operations = [{
+   icon: 'Edit',
+   emitName: 'handleUpdate',
+   buttonName: '修改'
+}, {
+   type: 'danger',
+   icon: 'Delete',
+   emitName: 'handleDelete',
+   buttonName: '删除'
+}]
 const open = ref(false);
 const loading = ref(false);
 const showSearch = ref(true);
@@ -140,12 +153,23 @@ const data = reactive({
 });
 
 const { queryParams, form, rules } = toRefs(data);
-
+/** 设置行样式 */
+function tableRowClassName({ row }) {
+   console.log(row.status === 0)
+   if (row.status === 0) {
+      return 'disabled-row';
+   } else if (row.status === 1) {
+      return 'abled-row';
+   }
+   return '';
+}
 /** 查询参数列表 */
-function getList() {
+function getList(current, size) {
+   if (current) queryParams.value.current = current
+   if (size) queryParams.value.size = size
    loading.value = true;
    queryList(queryParams.value).then(response => {
-      configList.value = response.data.data;
+      dataList.value = response.data.data;
       totalNum.value = response.data.totalNum;
       loading.value = false;
    });
@@ -182,6 +206,13 @@ function handleAdd() {
    form.value.dealTemplateCategoryId = '-1'
    open.value = true;
    title.value = "新增模板组";
+}
+function operationHandler(handleName, row) {
+   if (handleName === 'handleUpdate') {
+      handleUpdate(row)
+   } else if (handleName === 'handleDelete') {
+      handleDelete(row)
+   }
 }
 /** 修改按钮操作 */
 function handleUpdate(row) {
@@ -235,9 +266,9 @@ function checkDealCodeExist(rule, value, callback) {
    } else {
       // 新增校验
       dealCodeIsExist(value).then(response => {
-         if(response.data) {
+         if (response.data) {
             callback(new Error('该dealCode已存在'));
-         }else{
+         } else {
             callback()
          }
       })

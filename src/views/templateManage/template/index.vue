@@ -16,7 +16,15 @@
                <el-option label="启用" :value="1" />
             </el-select>
          </el-form-item>
-         <el-form-item>
+         <el-form-item label="模板组" prop="dealTemplateGroupId">
+            <el-select v-model="queryParams.dealTemplateGroupId" filterable remote placeholder="请输入模板组名称"
+               :remote-method="getGroupList" @focus="getGroupList()" :loading="groupLoading">
+               <el-option label="无" :value="null"></el-option>
+               <el-option v-for="item in groupList" :key="item.id" :label="item.name" :value="item.id">
+               </el-option>
+            </el-select>
+         </el-form-item>
+         <el-form-item style="float:right">
             <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
             <el-button icon="Refresh" @click="resetQuery">重置</el-button>
          </el-form-item>
@@ -34,41 +42,9 @@
          </el-col>
          <right-toolbar v-model:showSearch="showSearch" @queryTable="getList"></right-toolbar>
       </el-row>
-
-      <el-table v-loading="loading" :data="configList" :border="true" @selection-change="handleSelectionChange">
-         <el-table-column type="selection" width="55" align="center" />
-         <el-table-column label="id" align="center" prop="id" width="55" />
-         <el-table-column label="名称" align="center" prop="name" :show-overflow-tooltip="true" />
-         <el-table-column label="模板唯一code" align="center" prop="dealCode" :show-overflow-tooltip="true" />
-         <!-- <el-table-column label="模板组id" align="center" prop="dealTemplateGroupId" :show-overflow-tooltip="true" />
-         <el-table-column label="详情" align="center" prop="detail" :show-overflow-tooltip="true" />
-         <el-table-column label="数据处理前" align="center" prop="dealDataBefore" :show-overflow-tooltip="true" />
-         <el-table-column label="数据处理后" align="center" prop="dealDataAfter" :show-overflow-tooltip="true" /> -->
-         <el-table-column label="状态" align="center" prop="status">
-            <template #default="scope">
-               <div>{{ scope.row.status == 0 ? '禁用' : '启用' }}</div>
-            </template>
-         </el-table-column>
-         <el-table-column label="创建时间" align="center" prop="createTime" width="180">
-            <template #default="scope">
-               <span>{{ parseTime(scope.row.createTime) }}</span>
-            </template>
-         </el-table-column>
-         <el-table-column label="修改时间" align="center" prop="updateTime" width="180">
-            <template #default="scope">
-               <span>{{ parseTime(scope.row.updateTime) }}</span>
-            </template>
-         </el-table-column>
-         <el-table-column label="操作" align="center" width="150" class-name="small-padding fixed-width">
-            <template #default="scope">
-               <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)">修改</el-button>
-               <el-button link type="primary" icon="Delete" @click="handleDelete(scope.row)">删除</el-button>
-            </template>
-         </el-table-column>
-      </el-table>
-
-      <pagination v-show="totalNum > 0" :total="totalNum" v-model:page="queryParams.current"
-         v-model:limit="queryParams.size" @pagination="getList" />
+      <m-table :loading="loading" :dataList="dataList" :columns="columns" :operations="operations" :totalNum="totalNum"
+         :current="queryParams.current" :size="queryParams.size" @handleSelectionChange="handleSelectionChange"
+         @operationHandler="operationHandler" @getList="getList"></m-table>
 
       <!-- 添加或修改参数配置对话框 -->
       <el-dialog :title="title" v-model="open" width="800px" append-to-body>
@@ -87,15 +63,10 @@
                </el-select>
             </el-form-item>
             <el-form-item label="详情" prop="detail">
-               <el-input v-model="form.detail" placeholder="请输入" />
+               <el-input type="textarea" v-model="form.detail" placeholder="请输入" />
             </el-form-item>
             <el-form-item label="状态" prop="status">
-               <el-switch
-                  v-model="form.status"
-                  active-text="启用"
-                  inactive-text="禁用"
-                  :active-value="1"
-                  :inactive-value="0">
+               <el-switch v-model="form.status" active-text="启用" inactive-text="禁用" :active-value="1" :inactive-value="0">
                </el-switch>
             </el-form-item>
             <el-form-item label="数据被处理之前" prop="dealDataBefore">
@@ -122,7 +93,44 @@ import { debounce } from "@/utils";
 
 const { proxy } = getCurrentInstance();
 
-const configList = ref([]);
+const dataList = ref([]);
+const columns = [{
+   label: 'id',
+   prop: 'id',
+   width: 55
+}, {
+   label: '名称',
+   prop: 'name',
+   showOverflowTooltip: true
+}, {
+   label: '模板唯一code',
+   prop: 'dealCode',
+   showOverflowTooltip: true
+}, {
+   label: '状态',
+   prop: 'status',
+   scope: (value) => value == 0 ? '禁用' : '启用'
+}, {
+   label: '创建时间',
+   prop: 'createTime',
+   width: 180,
+   scope: 'time'
+}, {
+   label: '修改时间',
+   prop: 'updateTime',
+   width: 180,
+   scope: 'time'
+}]
+const operations = [{
+   icon: 'Edit',
+   emitName: 'handleUpdate',
+   buttonName: '修改'
+}, {
+   type: 'danger',
+   icon: 'Delete',
+   emitName: 'handleDelete',
+   buttonName: '删除'
+}]
 const groupList = ref([]);
 const open = ref(false);
 const loading = ref(false);
@@ -144,12 +152,13 @@ const data = reactive({
       dealCode: '',
       name: '',
       status: '',
+      dealTemplateGroupId: null,
    },
    rules: {
       name: [{ required: true, message: "模板名称不能为空", trigger: "blur" }],
       dealCode: [
          { required: true, message: "模板唯一code不能为空", trigger: "blur" },
-         { validator: checkDealCodeExist, trigger: "blur"}
+         { validator: checkDealCodeExist, trigger: "blur" }
       ],
       dealTemplateGroupId: [{ required: true, message: "模板组不能为空", trigger: "blur" }],
       detail: [{ required: true, message: "详情不能为空", trigger: "blur" }],
@@ -162,10 +171,12 @@ const data = reactive({
 const { queryParams, form, rules } = toRefs(data);
 
 /** 查询参数列表 */
-function getList() {
+function getList(current, size) {
+   if (current) queryParams.value.current = current
+   if (size) queryParams.value.size = size
    loading.value = true;
    queryList(queryParams.value).then(response => {
-      configList.value = response.data.data;
+      dataList.value = response.data.data;
       totalNum.value = response.data.totalNum;
       loading.value = false;
    });
@@ -174,7 +185,7 @@ function getList() {
 function getGroupList(name) {
    groupList.value = []
    groupLoading.value = true
-   debounce(function() {
+   debounce(function () {
       queryGroup({
          name: name,
          current: groupList.length,
@@ -193,9 +204,9 @@ function checkDealCodeExist(rule, value, callback) {
    } else {
       // 新增校验
       dealCodeIsExist(value).then(response => {
-         if(response.data) {
+         if (response.data) {
             callback(new Error('该dealCode已存在'));
-         }else{
+         } else {
             callback()
          }
       })
@@ -232,6 +243,13 @@ function handleAdd() {
    reset();
    open.value = true;
    title.value = "新增模板";
+}
+function operationHandler(handleName, row) {
+   if (handleName === 'handleUpdate') {
+      handleUpdate(row)
+   } else if (handleName === 'handleDelete') {
+      handleDelete(row)
+   }
 }
 /** 修改按钮操作 */
 function handleUpdate(row) {
