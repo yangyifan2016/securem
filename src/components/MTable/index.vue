@@ -1,5 +1,5 @@
 <template>
-  <el-table v-loading="loading" :data="dataList" :border="true" @selection-change="handleSelectionChange" :row-class-name="tableRowClassName">
+  <el-table v-loading="loading" :data="dataList" :border="true" @selection-change="handleSelectionChange" :row-class-name="tableRowClassName" @cell-click="cellClick">
     <el-table-column type="selection" width="55" align="center" v-if="needSelection" />
     <el-table-column v-for="column in columns" :label="column.label" :width="column.width" :prop="column.prop"
       :show-overflow-tooltip="column.showOverflowTooltip" align="center">
@@ -20,6 +20,7 @@
 
 <script setup>
 
+import { ElMessage } from 'element-plus'
 const props = defineProps({
   loading: {
     type: Boolean,
@@ -80,6 +81,11 @@ function tableRowClassName({ row }) {
       return 'abled-row';
    }
    return '';
+}
+/** 单元格点击复制内容 */
+function cellClick(row, column, cell, event) {
+  // ElMessage.info('已复制')
+  
 }
 </script>
 

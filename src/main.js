@@ -73,7 +73,6 @@ app.use(store)
 app.use(plugins)
 app.use(elementIcons)
 app.component('svg-icon', SvgIcon)
-
 directive(app)
 
 // 使用element-plus 并且设置全局的大小

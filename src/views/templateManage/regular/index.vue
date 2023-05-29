@@ -35,18 +35,9 @@
          <right-toolbar v-model:showSearch="showSearch" @queryTable="getList"></right-toolbar>
       </el-row>
 
-      <m-table 
-         :loading="loading" 
-         :dataList="dataList" 
-         :columns="columns" 
-         :operations="operations" 
-         :totalNum="totalNum"
-         :current="queryParams.current" 
-         :size="queryParams.size" 
-         @handleSelectionChange="handleSelectionChange"
-         @operationHandler="operationHandler" 
-         @getList="getList"
-      ></m-table>
+      <m-table :loading="loading" :dataList="dataList" :columns="columns" :operations="operations" :totalNum="totalNum"
+         :current="queryParams.current" :size="queryParams.size" @handleSelectionChange="handleSelectionChange"
+         @operationHandler="operationHandler" @getList="getList"></m-table>
 
       <!-- 添加或修改参数配置对话框 -->
       <el-dialog :title="title" v-model="open" width="800px" append-to-body>
@@ -55,15 +46,10 @@
                <el-input v-model="form.regular" placeholder="请输入" />
             </el-form-item>
             <el-form-item label="描述" prop="description">
-               <el-input v-model="form.description" placeholder="请输入"/>
+               <el-input v-model="form.description" placeholder="请输入" />
             </el-form-item>
             <el-form-item label="状态" prop="status">
-               <el-switch
-                  v-model="form.status"
-                  active-text="启用"
-                  inactive-text="禁用"
-                  :active-value="1"
-                  :inactive-value="0">
+               <el-switch v-model="form.status" active-text="启用" inactive-text="禁用" :active-value="1" :inactive-value="0">
                </el-switch>
             </el-form-item>
          </el-form>
@@ -71,6 +57,29 @@
             <div class="dialog-footer">
                <el-button type="primary" @click="submitForm" :loading="btnLoading">确 定</el-button>
                <el-button @click="cancel">取 消</el-button>
+               <el-button type="success" @click="reg(form)">验 证</el-button>
+            </div>
+         </template>
+      </el-dialog>
+      <el-dialog title="正则验证" v-model="regOpen" width="800px" append-to-body>
+         <el-form ref="regRef" :model="currentData" label-width="150px">
+            <el-form-item label="正则:">
+               <div>{{ currentData.regular }}</div>
+            </el-form-item>
+            <el-form-item label="描述:">
+               <div>{{ currentData.description }}</div>
+            </el-form-item>
+            <el-form-item label="验证文本:" prop="text" :rules="[{ required: true, message: '验证文本不能为空', trigger: 'blur' }]">
+               <el-input v-model="currentData.text" placeholder="请输入" clearable/>
+            </el-form-item>
+            <el-form-item label="匹配结果:">
+               <div>{{ currentData.result }}</div>
+            </el-form-item>
+         </el-form>
+         <template #footer>
+            <div class="dialog-footer">
+               <el-button type="primary" @click="regStart" :loading="regLoading">验 证</el-button>
+               <el-button @click="regCancel">取 消</el-button>
             </div>
          </template>
       </el-dialog>
@@ -78,7 +87,7 @@
 </template>
 
 <script setup name="Config">
-import { queryList, createRegular, deleteRegular, updateRegular } from "@/api/templateManage/regular";
+import { queryList, createRegular, deleteRegular, updateRegular, detail, match } from "@/api/templateManage/regular";
 
 const { proxy } = getCurrentInstance();
 
@@ -119,6 +128,11 @@ const operations = [{
    icon: 'Delete',
    emitName: 'handleDelete',
    buttonName: '删除'
+}, {
+   type: 'success',
+   icon: 'Check',
+   emitName: 'reg',
+   buttonName: '验证'
 }]
 const open = ref(false);
 const loading = ref(false);
@@ -130,9 +144,13 @@ const totalNum = ref(0);
 const title = ref("");
 const dateRange = ref([]);
 const btnLoading = ref(false);
+const regOpen = ref(false);
+const regLoading = ref(false);
 
 const data = reactive({
-   form: {},
+   form: {
+      status: 0
+   },
    queryParams: {
       current: 1,
       size: 10,
@@ -144,10 +162,11 @@ const data = reactive({
       regular: [{ required: true, message: "正则不能为空", trigger: "blur" }],
       description: [{ required: true, message: "描述不能为空", trigger: "blur" }],
       status: [{ required: true, message: "状态不能为空", trigger: "blur" }],
-   }
+   },
+   currentData: {},
 });
 
-const { queryParams, form, rules } = toRefs(data);
+const { queryParams, form, rules, currentData } = toRefs(data);
 
 /** 查询参数列表 */
 function getList(current, size) {
@@ -181,22 +200,33 @@ function reset() {
    form.value = {
       regular: '',
       description: '',
-      status: '',
+      status: 0,
    };
    proxy.resetForm("configRef");
+}
+/** 获取详情 */
+function getDetail(row) {
+   return detail({ id: row.id })
+}
+// 操作按钮点击
+function operationHandler(handleName, row) {
+   getDetail(row).then((res) => {
+      if (res.success) {
+         if (handleName === 'handleUpdate') {
+            handleUpdate(res.data)
+         } else if (handleName === 'handleDelete') {
+            handleDelete(res.data)
+         } else if (handleName === 'reg') {
+            reg(row)
+         }
+      }
+   })
 }
 /** 新增按钮操作 */
 function handleAdd() {
    reset();
    open.value = true;
    title.value = "新增正则";
-}
-function operationHandler(handleName, row) {
-   if (handleName === 'handleUpdate') {
-      handleUpdate(row)
-   } else if (handleName === 'handleDelete') {
-      handleDelete(row)
-   }
 }
 /** 修改按钮操作 */
 function handleUpdate(row) {
@@ -243,6 +273,36 @@ function handleSelectionChange(selection) {
    ids.value = selection.map(item => item.id);
    single.value = selection.length != 1;
    multiple.value = !selection.length;
+}
+/** 校验 */
+function reg(row) {
+   regOpen.value = true
+   currentData.value = row
+}
+function regStart() {
+   proxy.$refs["regRef"].validate(valid => {
+      if (valid) {
+         regLoading.value = true
+         match({
+            dataString: currentData.value.text,
+            regular: currentData.value.regular
+         }).then(response => {
+            currentData.value.result = response.data || '匹配结果为空'
+            regLoading.value = false
+         }).catch(() => {
+            regLoading.value = false
+         });
+      }
+   })
+}
+function regCancel() {
+   regOpen.value = false
+   currentData.value = {
+      regular: '',
+      description: '',
+      text: '',
+      result: '',
+   }
 }
 getList();
 </script>

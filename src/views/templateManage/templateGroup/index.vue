@@ -80,7 +80,7 @@
 </template>
 
 <script setup name="Config">
-import { queryList, createGroup, deleteGroup, updateGroup, dealCodeIsExist } from "@/api/templateManage/templateGroup";
+import { queryList, createGroup, deleteGroup, updateGroup, dealCodeIsExist, detail } from "@/api/templateManage/templateGroup";
 
 const { proxy } = getCurrentInstance();
 
@@ -134,7 +134,9 @@ const dateRange = ref([]);
 const btnLoading = ref(false);
 
 const data = reactive({
-   form: {},
+   form: {
+      status: 0
+   },
    queryParams: {
       current: 1,
       size: 10,
@@ -196,9 +198,25 @@ function reset() {
       dealCode: '',
       dealTemplateCategoryId: '',
       name: '',
-      status: '',
+      status: 0,
    };
    proxy.resetForm("configRef");
+}
+/** 获取详情 */
+function getDetail(row) {
+   return detail({id: row.id})
+}
+// 操作按钮点击
+function operationHandler(handleName, row) {
+   getDetail(row).then((res) => {
+      if (res.success) {
+         if (handleName === 'handleUpdate') {
+            handleUpdate(res.data)
+         } else if (handleName === 'handleDelete') {
+            handleDelete(res.data)
+         }
+      }
+   })
 }
 /** 新增按钮操作 */
 function handleAdd() {
@@ -206,13 +224,6 @@ function handleAdd() {
    form.value.dealTemplateCategoryId = '-1'
    open.value = true;
    title.value = "新增模板组";
-}
-function operationHandler(handleName, row) {
-   if (handleName === 'handleUpdate') {
-      handleUpdate(row)
-   } else if (handleName === 'handleDelete') {
-      handleDelete(row)
-   }
 }
 /** 修改按钮操作 */
 function handleUpdate(row) {

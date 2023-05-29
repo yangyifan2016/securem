@@ -42,3 +42,11 @@ export function dealCodeIsExist(data) {
     method: 'post',
   })
 }
+// 详情
+export function detail(query) {
+  return request({
+    url: '/manage/deal-template-group/getDealTemplateGroupById',
+    method: 'get',
+    params: query
+  })
+}

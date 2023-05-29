@@ -19,7 +19,7 @@
          <el-form-item label="模板组" prop="dealTemplateGroupId">
             <el-select v-model="queryParams.dealTemplateGroupId" filterable remote placeholder="请输入模板组名称"
                :remote-method="getGroupList" @focus="getGroupList()" :loading="groupLoading">
-               <el-option label="无" :value="null"></el-option>
+               <el-option label="无" :value="''"></el-option>
                <el-option v-for="item in groupList" :key="item.id" :label="item.name" :value="item.id">
                </el-option>
             </el-select>
@@ -87,7 +87,7 @@
 </template>
 
 <script setup name="Config">
-import { queryList, createTemplate, deleteTemplate, updateTemplate, dealCodeIsExist } from "@/api/templateManage/template";
+import { queryList, createTemplate, deleteTemplate, updateTemplate, dealCodeIsExist, detail } from "@/api/templateManage/template";
 import { queryList as queryGroup } from "@/api/templateManage/templateGroup";
 import { debounce } from "@/utils";
 
@@ -145,7 +145,9 @@ const btnLoading = ref(false);
 const groupLoading = ref(false);
 
 const data = reactive({
-   form: {},
+   form: {
+      status: 0
+   },
    queryParams: {
       current: 1,
       size: 10,
@@ -196,7 +198,7 @@ function getGroupList(name) {
       }).catch(() => {
          groupLoading.value = false
       });
-   }, 300, false)()
+   }, 1000, false)()
 }
 function checkDealCodeExist(rule, value, callback) {
    if (form.value.id != undefined) {
@@ -238,18 +240,27 @@ function reset() {
    };
    proxy.resetForm("configRef");
 }
+/** 获取详情 */
+function getDetail(row) {
+   return detail({id: row.id})
+}
+// 操作按钮点击
+function operationHandler(handleName, row) {
+   getDetail(row).then((res) => {
+      if (res.success) {
+         if (handleName === 'handleUpdate') {
+            handleUpdate(res.data)
+         } else if (handleName === 'handleDelete') {
+            handleDelete(res.data)
+         }
+      }
+   })
+}
 /** 新增按钮操作 */
 function handleAdd() {
    reset();
    open.value = true;
    title.value = "新增模板";
-}
-function operationHandler(handleName, row) {
-   if (handleName === 'handleUpdate') {
-      handleUpdate(row)
-   } else if (handleName === 'handleDelete') {
-      handleDelete(row)
-   }
 }
 /** 修改按钮操作 */
 function handleUpdate(row) {

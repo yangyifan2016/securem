@@ -35,4 +35,19 @@ export function deleteRegular(data) {
     data: data
   })
 }
-
+// 详情
+export function detail(query) {
+  return request({
+    url: '/manage/sx-regular/getRegularById',
+    method: 'get',
+    params: query
+  })
+}
+// 验证
+export function match(data) {
+  return request({
+    url: '/manage/sx-regular/matchRegular',
+    method: 'post',
+    data: data
+  })
+}
