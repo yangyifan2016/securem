@@ -84,8 +84,13 @@ function tableRowClassName({ row }) {
 }
 /** 单元格点击复制内容 */
 function cellClick(row, column, cell, event) {
-  // ElMessage.info('已复制')
-  
+  let save = e => {
+    e.clipboardData.setData('text/plain', event.target.innerText)
+    e.preventDefault()
+  }
+  document.addEventListener('copy', save)
+  document.execCommand('copy')
+  ElMessage({message:'复制成功',type:'success'})
 }
 </script>
 
