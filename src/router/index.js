@@ -26,28 +26,34 @@ import Layout from '@/layout'
 // 侧边栏路由
 export const sidebarRoutes = [
   {
-    path: '/templateManage',
-    name: 'templateManage',
+    path: '/manage',
+    name: 'manage',
     component: Layout,
     meta: { title: '模板管理', icon: 'form' },
     children: [
       {
         path: 'template',
-        component: () => import('@/views/templateManage/template/index'),
+        component: () => import('@/views/manage/template/index'),
         name: 'template',
         meta: { title: '处理模板', icon: 'form' }
       },
       {
         path: 'templateGroup',
-        component: () => import('@/views/templateManage/templateGroup/index'),
+        component: () => import('@/views/manage/templateGroup/index'),
         name: 'templateGroup',
         meta: { title: '处理模板组', icon: 'form' }
       },
       {
         path: 'regular',
-        component: () => import('@/views/templateManage/regular/index'),
+        component: () => import('@/views/manage/regular/index'),
         name: 'regular',
         meta: { title: '正则表达式', icon: 'form' }
+      },
+      {
+        path: 'database',
+        component: () => import('@/views/manage/database/index'),
+        name: 'database',
+        meta: { title: '数据源', icon: 'form' }
       }
     ]
   }

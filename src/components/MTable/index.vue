@@ -84,6 +84,7 @@ function tableRowClassName({ row }) {
 }
 /** 单元格点击复制内容 */
 function cellClick(row, column, cell, event) {
+  if (column.label === '操作') return
   let save = e => {
     e.clipboardData.setData('text/plain', event.target.innerText)
     e.preventDefault()
