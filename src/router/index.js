@@ -50,10 +50,28 @@ export const sidebarRoutes = [
         meta: { title: '正则表达式', icon: 'form' }
       },
       {
+        path: 'databaseType',
+        component: () => import('@/views/manage/databaseType/index'),
+        name: 'databaseType',
+        meta: { title: '数据源类型', icon: 'form' }
+      },
+      {
         path: 'database',
         component: () => import('@/views/manage/database/index'),
         name: 'database',
-        meta: { title: '数据源', icon: 'form' }
+        meta: { title: '用户数据源', icon: 'form' }
+      },
+      {
+        path: 'user',
+        component: () => import('@/views/manage/user/index'),
+        name: 'user',
+        meta: { title: '用户', icon: 'form' }
+      },
+      {
+        path: 'userDataSource',
+        component: () => import('@/views/manage/userDataSource/index'),
+        name: 'userDataSource',
+        meta: { title: '用户数据源连接', icon: 'form' }
       }
     ]
   }

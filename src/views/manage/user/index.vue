@@ -1,15 +1,21 @@
 <template>
    <div class="app-container">
       <el-form :model="queryParams" ref="queryRef" :inline="true" v-show="showSearch" label-width="140px">
-         <el-form-item label="数据源实例id" prop="instanceId">
-            <el-input v-model="queryParams.instanceId" placeholder="请输入" clearable style="width: 240px"
+         <el-form-item label="公司id" prop="companyId">
+            <el-input v-model="queryParams.companyId" placeholder="请输入" clearable style="width: 240px"
                @keyup.enter="handleQuery" />
          </el-form-item>
-         <el-form-item label="实例类型" prop="instanceType">
-            <el-select v-model="queryParams.instanceType" placeholder="状态" clearable>
-               <el-option label="无" :value="''" />
-               <el-option v-for="t in instanceTypeList" :label="t.dbTypeName" :value="t.dbType" />
-            </el-select>
+         <el-form-item label="等级" prop="level">
+            <el-input v-model="queryParams.level" placeholder="请输入" clearable style="width: 240px"
+               @keyup.enter="handleQuery" />
+         </el-form-item>
+         <el-form-item label="用户id" prop="userId">
+            <el-input v-model="queryParams.userId" placeholder="请输入" clearable style="width: 240px"
+               @keyup.enter="handleQuery" />
+         </el-form-item>
+         <el-form-item label="用户名" prop="userName">
+            <el-input v-model="queryParams.userName" placeholder="请输入" clearable style="width: 240px"
+               @keyup.enter="handleQuery" />
          </el-form-item>
          <el-form-item label="状态" prop="status">
             <el-select v-model="queryParams.status" placeholder="状态" clearable>
@@ -17,10 +23,6 @@
                <el-option label="禁用" :value="0" />
                <el-option label="启用" :value="1" />
             </el-select>
-         </el-form-item>
-         <el-form-item label="用户id" prop="userId">
-            <el-input v-model="queryParams.userId" placeholder="请输入" clearable style="width: 240px"
-               @keyup.enter="handleQuery" />
          </el-form-item>
          <el-form-item style="float:right">
             <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
@@ -40,25 +42,32 @@
          </el-col>
          <right-toolbar v-model:showSearch="showSearch" @queryTable="getList"></right-toolbar>
       </el-row>
-
       <m-table :loading="loading" :dataList="dataList" :columns="columns" :operations="operations" :totalNum="totalNum"
          :current="queryParams.current" :size="queryParams.size" @handleSelectionChange="handleSelectionChange"
-         @operationHandler="operationHandler" @getList="getList"></m-table>
+         @operationHandler="operationHandler" @getList="getList">
+      </m-table>
 
       <!-- 添加或修改参数配置对话框 -->
       <el-dialog :title="title" v-model="open" width="800px" append-to-body>
          <el-form ref="configRef" :model="form" :rules="rules" label-width="150px">
-            <el-form-item label="实例类型" prop="instanceType">
-               <el-select v-model="form.instanceType" placeholder="状态" clearable>
-                  <el-option v-for="t in instanceTypeList" :label="t.dbTypeName" :value="t.dbType" />
-               </el-select>
+            <el-form-item label="用户名" prop="userName">
+               <el-input v-model="form.userName" placeholder="请输入" :disabled="Boolean(form.id)"/>
+            </el-form-item>
+            <el-form-item label="密码" prop="password">
+               <el-input type="password" v-model="form.password" placeholder="请输入" :disabled="Boolean(form.id)"/>
+            </el-form-item>
+            <el-form-item label="公司id" prop="companyId">
+               <el-input v-model="form.companyId" placeholder="请输入" :disabled="Boolean(form.id)"/>
+            </el-form-item>
+            <el-form-item label="等级" prop="level">
+               <el-input v-model="form.level" placeholder="请输入" :disabled="Boolean(form.id)" />
             </el-form-item>
             <el-form-item label="状态" prop="status">
                <el-switch v-model="form.status" active-text="启用" inactive-text="禁用" :active-value="1" :inactive-value="0">
                </el-switch>
             </el-form-item>
-            <el-form-item label="用户id" prop="userId">
-               <el-input v-model="form.userId" placeholder="请输入" />
+            <el-form-item label="头像地址" prop="profilePhotoImg">
+               <el-input v-model="form.profilePhotoImg" placeholder="请输入" :disabled="Boolean(form.id)"/>
             </el-form-item>
          </el-form>
          <template #footer>
@@ -72,44 +81,34 @@
 </template>
 
 <script setup name="Config">
-import { queryInstanceTypeList, queryList, createData, deleteData, changeStatus, detail } from "@/api/manage/database";
+import { queryList, createUser, deleteUser, updateUserStatus, detail } from "@/api/manage/user";
+import { queryList as queryGroup } from "@/api/manage/templateGroup";
+import { debounce } from "@/utils";
 
 const { proxy } = getCurrentInstance();
-const instanceTypeList = ref([])
+
 const dataList = ref([]);
 const columns = [{
-   label: 'id',
-   prop: 'id',
-   width: 55
+   label: '用户名',
+   prop: 'userName',
 }, {
-   label: '资产实例id',
-   prop: 'instanceId',
-}, {
-   label: '实例类型',
-   prop: 'instanceType',
-}, {
-   label: '用户Id',
-   prop: 'userId',
-   showOverflowTooltip: true
+   label: '头像',
+   prop: 'profilePhotoImg',
 }, {
    label: '状态',
    prop: 'status',
-   scope: (value) => value == 0 ? '禁用' : value == 1 ? '启用' : ''
+   scope: (value) => value == 0 ? '禁用' : '启用'
 }, {
-   label: '创建时间',
-   prop: 'createTime',
-   width: 180,
-   scope: 'time'
+   label: '公司id',
+   prop: 'companyId',
 }, {
-   label: '修改时间',
-   prop: 'updateTime',
-   width: 180,
-   scope: 'time'
+   label: '等级',
+   prop: 'level', 
 }]
 const operations = [{
    icon: 'Edit',
    emitName: 'handleUpdate',
-   buttonName: '修改'
+   buttonName: '修改状态'
 }, {
    type: 'danger',
    icon: 'Delete',
@@ -129,39 +128,25 @@ const btnLoading = ref(false);
 
 const data = reactive({
    form: {
-      instanceType: '',
-      status: 0,
-      userId: ''
+      status: 0
    },
    queryParams: {
       current: 1,
       size: 10,
-      instanceId: '',
-      instanceType: '',
-      status: '',
+      userName: '',
       userId: '',
+      status: '',
+      level: '',
+      companyId: '',
    },
    rules: {
-      instanceType: [
-         { required: true, message: "请选择实例类型", trigger: "blur" }
-      ],
-      userId: [
-         { required: true, message: "用户id不能为空", trigger: "blur" }
-      ],
-   },
+      userName: [{ required: true, message: "用户名不能为空", trigger: "blur" }],
+   }
 });
 
 const { queryParams, form, rules } = toRefs(data);
 
-/** 查询实例类型 */
-function getInstanceTypeList() {
-   queryInstanceTypeList({
-      current: 1,
-      size: 99
-   }).then(response => {
-      instanceTypeList.value = response.data.data;
-   });
-}/** 查询参数列表 */
+/** 查询参数列表 */
 function getList(current, size) {
    if (current) queryParams.value.current = current
    if (size) queryParams.value.size = size
@@ -191,15 +176,13 @@ function cancel() {
 /** 表单重置 */
 function reset() {
    form.value = {
-      regular: '',
-      description: '',
       status: 0,
    };
    proxy.resetForm("configRef");
 }
 /** 获取详情 */
 function getDetail(row) {
-   return detail({ id: row.id })
+   return detail({id: row.id})
 }
 // 操作按钮点击
 function operationHandler(handleName, row) {
@@ -217,15 +200,14 @@ function operationHandler(handleName, row) {
 function handleAdd() {
    reset();
    open.value = true;
-   title.value = "新增数据源";
+   title.value = "新增用户";
 }
 /** 修改按钮操作 */
 function handleUpdate(row) {
    reset();
-   // 记录dbType与dbTypeName,查重时排除初始值
    form.value = { ...row }
    open.value = true;
-   title.value = "修改数据源";
+   title.value = "修改用户";
 }
 /** 提交按钮 */
 function submitForm() {
@@ -233,14 +215,14 @@ function submitForm() {
       if (valid) {
          btnLoading.value = true
          if (form.value.id != undefined) {
-            changeStatus(form.value).then(response => {
+            updateUser(form.value).then(response => {
                proxy.$modal.msgSuccess("修改成功");
                open.value = false;
                btnLoading.value = false
                getList();
             });
          } else {
-            createData(form.value).then(response => {
+            createUser(form.value).then(response => {
                proxy.$modal.msgSuccess("新增成功");
                open.value = false;
                btnLoading.value = false
@@ -254,7 +236,7 @@ function submitForm() {
 function handleDelete(row) {
    const configIds = row.id ? [row.id] : ids.value;
    proxy.$modal.confirm('是否确认删除id为"' + configIds + '"的数据项？').then(function () {
-      return deleteData({ idList: configIds });
+      return deleteUser({ idList: configIds });
    }).then(() => {
       getList();
       proxy.$modal.msgSuccess("删除成功");
@@ -266,6 +248,5 @@ function handleSelectionChange(selection) {
    single.value = selection.length != 1;
    multiple.value = !selection.length;
 }
-getInstanceTypeList();
 getList();
 </script>

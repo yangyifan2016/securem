@@ -1,15 +1,17 @@
 <template>
    <div class="app-container">
       <el-form :model="queryParams" ref="queryRef" :inline="true" v-show="showSearch" label-width="140px">
-         <el-form-item label="数据源实例id" prop="instanceId">
-            <el-input v-model="queryParams.instanceId" placeholder="请输入" clearable style="width: 240px"
+         <el-form-item label="数据库分类" prop="category">
+            <el-input v-model="queryParams.category" placeholder="请输入" clearable style="width: 240px"
                @keyup.enter="handleQuery" />
          </el-form-item>
-         <el-form-item label="实例类型" prop="instanceType">
-            <el-select v-model="queryParams.instanceType" placeholder="状态" clearable>
-               <el-option label="无" :value="''" />
-               <el-option v-for="t in instanceTypeList" :label="t.dbTypeName" :value="t.dbType" />
-            </el-select>
+         <el-form-item label="数据库类型" prop="dbType">
+            <el-input v-model="queryParams.dbType" placeholder="请输入" clearable style="width: 240px"
+               @keyup.enter="handleQuery" />
+         </el-form-item>
+         <el-form-item label="数据库名称" prop="dbTypeName">
+            <el-input v-model="queryParams.dbTypeName" placeholder="请输入" clearable style="width: 240px"
+               @keyup.enter="handleQuery" />
          </el-form-item>
          <el-form-item label="状态" prop="status">
             <el-select v-model="queryParams.status" placeholder="状态" clearable>
@@ -17,10 +19,6 @@
                <el-option label="禁用" :value="0" />
                <el-option label="启用" :value="1" />
             </el-select>
-         </el-form-item>
-         <el-form-item label="用户id" prop="userId">
-            <el-input v-model="queryParams.userId" placeholder="请输入" clearable style="width: 240px"
-               @keyup.enter="handleQuery" />
          </el-form-item>
          <el-form-item style="float:right">
             <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
@@ -48,17 +46,27 @@
       <!-- 添加或修改参数配置对话框 -->
       <el-dialog :title="title" v-model="open" width="800px" append-to-body>
          <el-form ref="configRef" :model="form" :rules="rules" label-width="150px">
-            <el-form-item label="实例类型" prop="instanceType">
-               <el-select v-model="form.instanceType" placeholder="状态" clearable>
-                  <el-option v-for="t in instanceTypeList" :label="t.dbTypeName" :value="t.dbType" />
-               </el-select>
+            <el-form-item label="数据库分类" prop="category">
+               <el-input v-model="form.category" placeholder="请输入" />
+            </el-form-item>
+            <el-form-item label="数据库类型" prop="dbType">
+               <el-input v-model="form.dbType" placeholder="请输入" />
+            </el-form-item>
+            <el-form-item label="数据库名称" prop="dbTypeName">
+               <el-input v-model="form.dbTypeName" placeholder="请输入" />
+            </el-form-item>
+            <el-form-item label="数据库类型说明" prop="description">
+               <el-input v-model="form.description" placeholder="请输入" />
             </el-form-item>
             <el-form-item label="状态" prop="status">
                <el-switch v-model="form.status" active-text="启用" inactive-text="禁用" :active-value="1" :inactive-value="0">
                </el-switch>
             </el-form-item>
-            <el-form-item label="用户id" prop="userId">
-               <el-input v-model="form.userId" placeholder="请输入" />
+            <el-form-item label="数据源类型图标" prop="icon">
+               <el-input v-model="form.icon" placeholder="请输入" />
+            </el-form-item>
+            <el-form-item label="显示顺序" prop="viewOrder">
+               <el-input v-model="form.viewOrder" type="number" min="0" placeholder="请输入" />
             </el-form-item>
          </el-form>
          <template #footer>
@@ -72,29 +80,35 @@
 </template>
 
 <script setup name="Config">
-import { queryInstanceTypeList, queryList, createData, deleteData, changeStatus, detail } from "@/api/manage/database";
+import { queryList, createData, deleteData, updateData, detail, changeStatus, dbTypeIsExist, dbTypeNameIsExist } from "@/api/manage/databaseType";
 
 const { proxy } = getCurrentInstance();
-const instanceTypeList = ref([])
+
 const dataList = ref([]);
 const columns = [{
    label: 'id',
    prop: 'id',
    width: 55
 }, {
-   label: '资产实例id',
-   prop: 'instanceId',
+   label: '数据库名称',
+   prop: 'dbTypeName',
 }, {
-   label: '实例类型',
-   prop: 'instanceType',
+   label: '数据库类型',
+   prop: 'dbType',
 }, {
-   label: '用户Id',
-   prop: 'userId',
+   label: '数据库类型说明',
+   prop: 'description',
    showOverflowTooltip: true
+}, {
+   label: '数据库分类',
+   prop: 'category',
 }, {
    label: '状态',
    prop: 'status',
-   scope: (value) => value == 0 ? '禁用' : value == 1 ? '启用' : ''
+   scope: (value) => value == 0 ? '禁用' : '启用'
+}, {
+   label: '图标',
+   prop: 'icon',
 }, {
    label: '创建时间',
    prop: 'createTime',
@@ -129,39 +143,34 @@ const btnLoading = ref(false);
 
 const data = reactive({
    form: {
-      instanceType: '',
       status: 0,
-      userId: ''
+      viewOrder: 0
    },
    queryParams: {
       current: 1,
       size: 10,
-      instanceId: '',
-      instanceType: '',
+      category: '',
+      dbType: '',
+      dbTypeName: '',
       status: '',
-      userId: '',
    },
    rules: {
-      instanceType: [
-         { required: true, message: "请选择实例类型", trigger: "blur" }
+      dbType: [
+         { required: true, message: "数据库类型不能为空", trigger: "blur" },
+         { validator: checkDBType, trigger: "blur"}
       ],
-      userId: [
-         { required: true, message: "用户id不能为空", trigger: "blur" }
+      dbTypeName: [
+         { required: true, message: "数据库类型名称不能为空", trigger: "blur" },
+         { validator: checkDBTypeName, trigger: "blur"}
       ],
    },
+   // 修改初始值
+   originData: {},
 });
 
-const { queryParams, form, rules } = toRefs(data);
+const { queryParams, form, rules, originData } = toRefs(data);
 
-/** 查询实例类型 */
-function getInstanceTypeList() {
-   queryInstanceTypeList({
-      current: 1,
-      size: 99
-   }).then(response => {
-      instanceTypeList.value = response.data.data;
-   });
-}/** 查询参数列表 */
+/** 查询参数列表 */
 function getList(current, size) {
    if (current) queryParams.value.current = current
    if (size) queryParams.value.size = size
@@ -223,6 +232,7 @@ function handleAdd() {
 function handleUpdate(row) {
    reset();
    // 记录dbType与dbTypeName,查重时排除初始值
+   originData.value = { ...row }
    form.value = { ...row }
    open.value = true;
    title.value = "修改数据源";
@@ -233,7 +243,8 @@ function submitForm() {
       if (valid) {
          btnLoading.value = true
          if (form.value.id != undefined) {
-            changeStatus(form.value).then(response => {
+            updateData(form.value).then(response => {
+               originData.value = {}
                proxy.$modal.msgSuccess("修改成功");
                open.value = false;
                btnLoading.value = false
@@ -266,6 +277,43 @@ function handleSelectionChange(selection) {
    single.value = selection.length != 1;
    multiple.value = !selection.length;
 }
-getInstanceTypeList();
+function checkDBType(rule, value, callback) {
+   if (value === originData.value.dbType) {
+      callback()
+      return
+   }
+   const f = new FormData()
+   f.append('dbType', value)
+   dbTypeIsExist(f).then(response => {
+      if (response.data) {
+         callback(new Error('数据库类型已存在'));
+      } else {
+         callback();
+      }
+   });
+}
+function checkDBTypeName(rule, value, callback) {
+   if (value === originData.value.dbTypeName) {
+      callback()
+      return
+   }
+   const f = new FormData()
+   f.append('dbTypeName', value)
+   dbTypeNameIsExist(f).then(response => {
+      if (response.data) {
+         callback(new Error('数据库类型名称已存在'));
+      } else {
+         callback();
+      }
+   });
+}
+function handleStatusChange(row) {
+   changeStatus({
+      id: row.id,
+      status: row.status === 0 ? 1 : 0
+   }).then(response => {
+      getList();
+   })
+}
 getList();
 </script>

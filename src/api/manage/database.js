@@ -1,27 +1,34 @@
 import request from '@/utils/request'
 
-// 查询列表
-export function queryList(data) {
+// 查询实例类型列表
+export function queryInstanceTypeList(data) {
   return request({
     url: '/manage/databaseType/listDatabaseType',
     method: 'post',
     data: data
   })
 }
-
+// 查询列表
+export function queryList(data) {
+  return request({
+    url: '/manage/sxUserDataSource/listUserDateSource',
+    method: 'post',
+    data: data
+  })
+}
 // 新增
 export function createData(data) {
   return request({
-    url: '/manage/databaseType/createDatabaseType',
+    url: '/manage/sxUserDataSource/createUserDateSource',
     method: 'post',
     data: data
   })
 }
 
 // 修改
-export function updateData(data) {
+export function changeStatus(data) {
   return request({
-    url: '/manage/databaseType/updateDatabaseType',
+    url: '/manage/sxUserDataSource/changeUserDateSourceStatus',
     method: 'post',
     data: data
   })
@@ -30,7 +37,7 @@ export function updateData(data) {
 // 删除
 export function deleteData(data) {
   return request({
-    url: '/manage/databaseType/deleteDatabaseType',
+    url: '/manage/sxUserDataSource/deleteUserDateSource',
     method: 'post',
     data: data
   })
@@ -38,34 +45,8 @@ export function deleteData(data) {
 // 详情
 export function detail(query) {
   return request({
-    url: '/manage/databaseType/getDatabaseTypeById',
+    url: '/manage/sxUserDataSource/getUserDateSourceById',
     method: 'get',
     params: query
-  })
-}
-// 修改状态
-export function changeStatus(data) {
-  return request({
-    url: '/manage/databaseType/changeStatus',
-    method: 'post',
-    data: data
-  })
-}
-// 检查dbType是否存在
-export function dbTypeIsExist(data) {
-  return request({
-    url: '/manage/databaseType/dbTypeIsExist',
-    method: 'post',
-    data: data,
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-  })
-}
-// 检查dbTypeName是否存在
-export function dbTypeNameIsExist(data) {
-  return request({
-    url: '/manage/databaseType/dbTypeNameIsExist',
-    method: 'post',
-    data: data,
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
   })
 }
